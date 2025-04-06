@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using DiscordFacts.Providers;
 using DiscordFacts.Services;
+using DiscordFacts.Localization;
 
 namespace DiscordFacts.Commands;
 
@@ -10,12 +11,14 @@ public class CommandHandler
     private readonly DiscordSocketClient _client;
     private readonly FactScheduler _scheduler;
     private readonly IFactProvider _factProvider;
+    private readonly ILocalizationProvider _localizationProvider;
 
-    public CommandHandler(DiscordSocketClient client, FactScheduler scheduler, IFactProvider factProvider)
+    public CommandHandler(DiscordSocketClient client, FactScheduler scheduler, IFactProvider factProvider, ILocalizationProvider localizationProvider)
     {
         _client = client;
         _scheduler = scheduler;
         _factProvider = factProvider;
+        _localizationProvider = localizationProvider;
     }
 
     public async Task RegisterCommandsAsync()
@@ -70,87 +73,69 @@ public class CommandHandler
     public async Task HandleCommandAsync(SocketSlashCommand command)
     {
         var channelId = command.Channel.Id;
+        var lang = _scheduler.GetLanguage(channelId);
 
         switch (command.CommandName)
         {
             case "start":
                 if (_scheduler.IsChannelRegistered(channelId))
                 {
-                    await command.RespondAsync("AAAH? YOU SCARED ME! Nyaa~! I already started sending facts here! Don't be so impatient~ (≧◡≦)");
+                    await command.RespondAsync(_localizationProvider.GetString(lang, "StartAlreadyRegistered"));
                 }
                 else
                 {
                     _scheduler.RegisterChannel(channelId);
-                    await command.RespondAsync("Yatta~! I'm now sending random facts every hour in this channel! (⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)");
+                    await command.RespondAsync(_localizationProvider.GetString(lang, "StartRegistered"));
                 }
                 break;
 
             case "stop":
                 _scheduler.UnregisterChannel(channelId);
-                await command.RespondAsync("Aww... okay! I'll stop for now. Let me know when you need me again~ (｡•́︿•̀｡)");
+                await command.RespondAsync(_localizationProvider.GetString(lang, "Stop"));
                 break;
 
             case "language":
                 var builder = new ComponentBuilder()
                     .WithButton("🇬🇧 English", "lang_en", ButtonStyle.Primary)
-                    .WithButton("🇷🇺 Russian", "lang_ru", ButtonStyle.Secondary);
+                    .WithButton("🇷🇺 Russian", "lang_ru", ButtonStyle.Secondary)
+                    .WithButton("🇺🇦 Українська", "lang_uk", ButtonStyle.Secondary);
 
-                await command.RespondAsync("Choose your language, senpai~:", components: builder.Build());
+                await command.RespondAsync(_localizationProvider.GetString(lang, "ChooseLanguage"), components: builder.Build());
                 break;
 
             case "nextfact":
-                var lang = _scheduler.GetLanguage(channelId);
-                await command.RespondAsync("Let me think... nya~ here's something you might like! (๑˃ᴗ˂)ﻭ", ephemeral: false);
-
+                await command.RespondAsync(_localizationProvider.GetString(lang, "NextFactIntro"), ephemeral: false);
                 var fact = await _factProvider.GetRandomFactAsync(lang);
                 await command.Channel.SendMessageAsync(fact);
                 break;
 
             case "ping":
-                await command.RespondAsync("Hey, dont touch me~~! I'm totally awake and ready~ (≧ω≦)");
+                await command.RespondAsync(_localizationProvider.GetString(lang, "Ping"));
                 break;
 
             case "help":
-                await command.RespondAsync("**Available Commands, nya~!**\n" +
-                    "`/start` — Start hourly fact delivery~ \n" +
-                    "`/stop` — Stop sending facts... (T_T)\n" +
-                    "`/language` — Choose your language~ \n" +
-                    "`/nextfact` — Gimme one fact right meow! \n" +
-                    "`/ping` — Are you there, bot-senpai? \n" +
-                    "`/info` — What even am I? \n" +
-                    "`/hug` — Ask me for a hug~ uwu 💕\n" +
-                    "`/senpai` — I’ll cheer you up like a proper anime waifu~ \n\n" +
-                    "*Use them wisely, okay~? (≧◡≦)*");
+                await command.RespondAsync(_localizationProvider.GetString(lang, "Help"));
                 break;
 
             case "info":
-                await command.RespondAsync(
-                    " *Hehe~ Konbanwa!* I'm **FactsBot-chan** — your cozy little assistant for sharing fun random facts!\n\n" +
-                    "I pop in every hour to share wisdom, history, science, or even space stuff~ \n" +
-                    "Just say `/start` and I'll sparkle my way into your channel~ \n\n" +
-                    "*Let's get smarter together, one fact at a time~ nyaa~!* (ฅ'ω'ฅ)"
-                );
+                await command.RespondAsync(_localizationProvider.GetString(lang, "Info"));
                 break;
 
             case "hug":
                 var user = command.User.Username;
-                await command.RespondAsync($"Mou~ I'll hug you, {user}-chan~ (つ≧▽≦)つ 💞");
+                var hugMsg = string.Format(_localizationProvider.GetString(lang, "Hug"), user);
+                await command.RespondAsync(hugMsg);
                 break;
 
             case "senpai":
-                await command.RespondAsync("One moment~ charging my kawaii energy~ (￣︶￣)");
-
-                var encouragement = await _factProvider.GenerateWaifuMessageAsync();
-
-                // Обрезаем до безопасной длины
+                var introMessage = _localizationProvider.GetString(lang, "SenpaiIntro");
+                await command.RespondAsync(introMessage);
+                var encouragement = await _factProvider.GenerateWaifuMessageAsync(lang);
                 string safeReply = encouragement.Length > 2000
-                    ? encouragement.Substring(0, 1990) + "..." // оставляем запас под emoji и символы
+                    ? encouragement[..1990] + "..."
                     : encouragement;
-
-                await command.FollowupAsync(safeReply);
+                await command.ModifyOriginalResponseAsync(x => x.Content = safeReply);
                 break;
-
-
         }
     }
 }

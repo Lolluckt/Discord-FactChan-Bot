@@ -3,8 +3,5 @@
 public interface IFactProvider
 {
     Task<string> GetRandomFactAsync(string lang = "en");
-    Task<string> GenerateWaifuMessageAsync();
-
+    Task<string> GenerateWaifuMessageAsync(string lang = "en");
 }
-
-

@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using DiscordFacts.Commands;
 using DiscordFacts.Providers;
 using DiscordFacts.Services;
+using DiscordFacts.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,6 +22,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<BotService>();
         services.AddSingleton<IFactProvider, FactProvider>();
         services.AddSingleton<FactScheduler>();
+        services.AddSingleton<ILocalizationProvider, LocalizationProvider>();
     })
     .ConfigureLogging(logging =>
     {
@@ -29,9 +31,6 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .Build();
 
-
-
 var bot = host.Services.GetRequiredService<BotService>();
 await bot.StartAsync();
-
 await host.RunAsync();

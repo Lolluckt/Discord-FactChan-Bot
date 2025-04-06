@@ -18,7 +18,6 @@ public class FactScheduler
     {
         _factProvider = factProvider;
         _client = client;
-
         LoadState();
     }
 
@@ -36,15 +35,7 @@ public class FactScheduler
                     await channel.SendMessageAsync(fact);
                 }
             }
-
-
             await Task.Delay(TimeSpan.FromHours(1));
-
-            // Проверка каждую минуту (для теста)
-            //await Task.Delay(TimeSpan.FromMinutes(1));
-
-
-
         }
     }
 
