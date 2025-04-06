@@ -1,0 +1,19 @@
+
+# Ignore configuration
+appsettings.json
+
+# Build artifacts
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.csproj.user
+.vs/
+
+# Logs
+*.log
+
+# Backup files
+*~
