@@ -1,4 +1,5 @@
 ﻿using DiscordFacts.Models;
+using DiscordFacts.Localization;
 using Microsoft.Extensions.Configuration;
 using System.Text;
 using System.Text.Json;
@@ -9,24 +10,24 @@ public class FactProvider : IFactProvider
 {
     private readonly IConfiguration _config;
     private readonly HttpClient _httpClient = new();
+    private readonly ILocalizationProvider _localizationProvider;
 
-    public FactProvider(IConfiguration config)
+    public FactProvider(IConfiguration config, ILocalizationProvider localizationProvider)
     {
         _config = config;
+        _localizationProvider = localizationProvider;
     }
 
     public async Task<string> GetRandomFactAsync(string lang = "en")
     {
         var category = FactCategoryExtensions.GetRandomCategory();
         var categoryText = category.ToPromptString(lang);
-
-        var prompt = lang == "ru"
-            ? $"Расскажи короткий интересный факт о {categoryText}. Старайся ответить одним предложением."
-            : $"Tell me a short and interesting fact about {categoryText}. Try answer in one sentence.";
+        var promptTemplate = _localizationProvider.GetString(lang, "FactPrompt");
+        var prompt = string.Format(promptTemplate, categoryText);
 
         var body = new
         {
-            model = "openchat/openchat-7b:free",
+            model = "meta-llama/llama-4-maverick:free",
             messages = new[]
             {
                 new { role = "user", content = prompt }
@@ -60,19 +61,19 @@ public class FactProvider : IFactProvider
         {
             return $"❌ Failed to parse LLM response: {ex.Message}\nRaw:\n{json}";
         }
-
     }
-    public async Task<string> GenerateWaifuMessageAsync()
+
+    public async Task<string> GenerateWaifuMessageAsync(string lang = "en")
     {
-        var prompt = "You're a cute anime waifu bot. Say something very encouraging, wholesome and uplifting in kawaii anime girl style. Tell them they are amazing, and make it sparkle~ Use emojis and sparkle energy~";
+        var prompt = _localizationProvider.GetString(lang, "SenpaiPrompt");
 
         var body = new
         {
-            model = "openchat/openchat-7b:free",
+            model = "meta-llama/llama-4-maverick:free",
             messages = new[]
             {
-            new { role = "user", content = prompt }
-        }
+                new { role = "user", content = prompt }
+            }
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions");
@@ -96,9 +97,9 @@ public class FactProvider : IFactProvider
 
             if (string.IsNullOrWhiteSpace(reply))
                 return "Nyaa~ my waifu brain is empty... try again later~ (｡•́︿•̀｡)";
-            var final = $"🌸 {reply}";
+            var final = $" {reply}";
             if (final.Length > 2000)
-                final = final.Substring(0, 1990) + "... 💫";
+                final = final[..1990] + "... ";
 
             return final;
         }
@@ -107,6 +108,4 @@ public class FactProvider : IFactProvider
             return $"❌ Failed to parse waifu response: {ex.Message}\nRaw:\n{json}";
         }
     }
-
-
 }
